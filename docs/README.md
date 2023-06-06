@@ -26,6 +26,7 @@ A Fusion 360 add-in to export assemblies to MRR (MechSim Robot Representation) f
 
 |Type  |Name  |Description |
 |--|--|--|
+|size_t |nameSize |Size of name string. |
 |String |name |Unique name for the part. |
 |Pose |pose |Position and orientation of part. |
 |size_t |jointReferenceListSize |Size of the joint reference list. |

@@ -84,7 +84,10 @@ void Parser::serialize(std::ofstream& file) {
 	file.write(reinterpret_cast<const char*>(&partsListSize), sizeof(partsListSize));
 
 	for (auto& partEntry : partsEntries) {
-		file << partEntry.name << '\0';
+		size_t nameSize = partEntry.name.size();
+		file.write(reinterpret_cast<const char*>(&nameSize), sizeof(nameSize));
+
+		file << partEntry.name;
 		file.write(reinterpret_cast<const char*>(&partEntry.pose), sizeof(partEntry.pose));
 		
 		size_t jointRefListSize = partEntry.joints.size();
