@@ -112,6 +112,9 @@
     <ClInclude Include="Parser.h" />
     <ClInclude Include="ThreadPool.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="docs\docs.md" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
