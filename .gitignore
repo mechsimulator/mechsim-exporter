@@ -1,0 +1,8 @@
+.vs
+Debug
+MSExporter.xcodeproj
+ 
+*.dll
+*.dylib
+*.manifest
+*.vcxproj.user
