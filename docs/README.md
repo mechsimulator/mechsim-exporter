@@ -19,7 +19,7 @@ A Fusion 360 add-in to export assemblies to MRR (MechSim Robot Representation) f
 
 |Type  |Name  |Description |
 |--|--|--|
-|JointType |type |The joint type that describes the relative motion between two parts. (e.g. rigid, revolute, slider) |
+|uint32_t |type |The joint type that describes the relative motion between two parts. (e.g. rigid, revolute, slider) |
 |Pose |pose |Position and orientation of joint. |
 
 ### PartEntry
