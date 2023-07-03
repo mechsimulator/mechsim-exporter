@@ -5,6 +5,8 @@
 
 #define ms_format(x) ((std::ostringstream() << x).str())
 
+#define assertm(exp, msg) assert(((void)msg, exp))
+
 using namespace adsk::core;
 
 extern Ptr<Application> app;

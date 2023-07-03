@@ -3,30 +3,63 @@
 
 #include <algorithm>
 
-/// Joint or AsBuiltJoint
-template<typename JointType>
-void Parser::parseJoint(Ptr<JointType> joint, Ptr<JointGeometry> geometry) {
-	if (!strcmp(joint->objectType(), "adsk::fusion::JointGeometry")) {
-		parse_error("Error parsing joint: joint objectType != adsk::fusion::JointGeometry");
-	}
+template<typename J>
+glm::dvec3 getOriginFromJoint(Ptr<J> joint, Ptr<JointGeometry> geometryOrOrigin) {
 
-	glm::dvec3 translation;
-	geometry->origin()->getData(translation.x, translation.y, translation.z);
+	Ptr<JointGeometry> geometry;
+	if (!strcmp(geometryOrOrigin->objectType(), "adsk::fusion::JointGeometry")) {
+		geometry = geometryOrOrigin->cast<JointGeometry>();
+		auto ent = geometry->entityOne();
+		if (!strcmp(ent->objectType(), "adsk::fusion::BRepEdge")) {
+			auto entEdge = ent->cast<BRepEdge>();
+			if (!entEdge->assemblyContext()) {
+				auto newEnt = entEdge->createForAssemblyContext(joint->occurrenceOne());
+				auto min = newEnt->boundingBox()->minPoint();
+				auto max = newEnt->boundingBox()->maxPoint();
+				return glm::dvec3((max->x() + min->x()) / 2.0, (max->y() + min->y()) / 2.0, (max->z() + min->z()) / 2.0);
+			} else {
+				return glm::dvec3();
+			}
+		}
+		
+		if (!strcmp(ent->objectType(), "adsk::fusion::BRepFace")) {
+			auto entFace = ent->cast<BRepFace>();
+			if (!entFace->assemblyContext()) {
+				auto newEnt = entFace->createForAssemblyContext(joint->occurrenceOne());
+				auto centroid = newEnt->centroid();
+				return glm::dvec3(centroid->x(), centroid->y(), centroid->z());
+			} else {
+				return glm::dvec3();
+			}
+		} else {
+			return glm::dvec3();
+		}
+	} else { // JointOrigin
+		auto origin = geometryOrOrigin->cast<JointOrigin>()->geometry()->origin();
+		return glm::dvec3(origin->x(), origin->y(), origin->z());
+	}
+}
+
+/// Joint or AsBuiltJoint
+template<typename T>
+void Parser::parseJoint(Ptr<T> joint, Ptr<JointGeometry> geometry) {
+	glm::dvec3 translation = getOriginFromJoint(joint, geometry);
+
+	app->log(ms_format(translation.x << ", " << translation.y << ", " << translation.z));
 	auto vec = get_vec3_from_native_vec3(geometry->primaryAxisVector());
-	jointMap.emplace(joint->entityToken(), std::make_pair(JointEntry{ joint->jointMotion()->jointType(), Pose{ translation, get_quat_from_vec(vec) } }, jointMap.size() + 1));
+	jointMap.emplace(joint->entityToken(), std::make_pair(JointEntry{ static_cast<JointType>(joint->jointMotion()->jointType()), Pose{ translation, get_quat_from_vec(vec) } }, jointMap.size() + 1));
 }
 
 void Parser::parse() {
-	
 	if (
 		root->allJoints().size() == 0 &&
 		root->allAsBuiltJoints().size() == 0
 	) parse_warn("No joints found.");
 
-	for (auto joint : root->allJoints())
-		parseJoint(joint, joint->geometryOrOriginTwo()->cast<JointGeometry>());
+	for (auto& joint : root->allJoints())
+		parseJoint(joint, joint->geometryOrOriginOne()->cast<JointGeometry>());
 
-	for (auto asBuiltJoint : root->allAsBuiltJoints()) 
+	for (auto &asBuiltJoint : root->allAsBuiltJoints()) 
 		parseJoint(asBuiltJoint, asBuiltJoint->geometry());
 
 	if (root->allRigidGroups().size() == 0) parse_warn("No rigid groups found.");
@@ -54,7 +87,9 @@ void Parser::parse() {
 		}
 
 		for (auto body : part->bRepBodies()) {
-			auto mesh = body->meshManager()->createMeshCalculator()->calculate();
+			auto meshCalculator = body->meshManager()->createMeshCalculator();
+			meshCalculator->setQuality(TriangleMeshQualityOptions::VeryHighQualityTriangleMesh);
+			auto mesh = meshCalculator->calculate();
 			partEntry.bodies.push_back(BodyEntry{
 				mesh->triangleCount(),
 				mesh->nodeCoordinatesAsFloat(),
@@ -74,7 +109,7 @@ void Parser::serialize(std::ofstream& file) {
 	// Joint palette
 	size_t jointListSize = jointMap.size();
 	file.write(reinterpret_cast<const char*>(&jointListSize), sizeof(jointListSize));
-
+	
 	for (auto jointMapEntry : jointMap) {
 		JointEntry entry = jointMapEntry.second.first;
 		file.write(reinterpret_cast<const char*>(&entry), sizeof(entry));
@@ -82,11 +117,11 @@ void Parser::serialize(std::ofstream& file) {
 
 	size_t partsListSize = partsEntries.size();
 	file.write(reinterpret_cast<const char*>(&partsListSize), sizeof(partsListSize));
-
+	
 	for (auto& partEntry : partsEntries) {
 		size_t nameSize = partEntry.name.size();
 		file.write(reinterpret_cast<const char*>(&nameSize), sizeof(nameSize));
-
+		
 		file << partEntry.name;
 		file.write(reinterpret_cast<const char*>(&partEntry.pose), sizeof(partEntry.pose));
 		

@@ -12,12 +12,14 @@
 using namespace adsk::core;
 using namespace adsk::fusion;
 
+#pragma pack(push, 1)
 struct Pose {
 	glm::dvec3 translation;
 	glm::dquat orientation;
 
 	glm::dvec3 euler_angles();
 };
+#pragma pack(pop)
 
 glm::dmat4 vec_to_glm_mat4(std::vector<double>& vec);
 

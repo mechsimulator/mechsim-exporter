@@ -14,10 +14,22 @@
 using namespace adsk::core;
 using namespace adsk::fusion;
 
+enum JointType : uint32_t {
+	RigidJointType = 0,
+	RevoluteJointType,
+	SliderJointType,
+	CylindricalJointType,
+	PinSlotJointType,
+	PlanarJointType,
+	BallJointType
+};
+
+#pragma pack(push, 1)
 struct JointEntry {
-	JointTypes type;
+	JointType type;
 	Pose pose;
 };
+#pragma pack(pop)
 
 struct BodyEntry {
 	int32_t triangleCount;
@@ -44,8 +56,8 @@ public:
 	void serialize(std::ofstream &file);
 
 private:
-	template<typename JointType>
-	void parseJoint(Ptr<JointType> joint, Ptr<JointGeometry> geometry);
+	template<typename T>
+	void parseJoint(Ptr<T> joint, Ptr<JointGeometry> geometry);
 
 	static const char* Parser::joint_type_to_str(JointTypes type);
 	static void Parser::parse_error(const char* msg);
